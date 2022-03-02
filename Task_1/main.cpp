@@ -5,36 +5,49 @@
 #include <clocale>
 #include "Word.h"
 
-std::vector<Word> readDictionary(const std::string &filepath) {
-    std::ifstream dictFile(filepath);
-    std::string line;
+std::vector<Word *> readDictionary(const std::string &filepath) {
+    std::wifstream dictFile(filepath);
+    dictFile.imbue(std::locale("ru_RU.UTF-8"));
 
-    std::vector<Word> words;
+    std::vector<Word *> words;
+    std::wstring line;
+
+    Word *word;
+    Word *lemma;
 
     while (std::getline(dictFile, line)) {
-        if (line.empty() || std::isdigit(line[0])) continue;
-        Word word;
+        if (line.empty() || std::isdigit(line[0])) {
+            lemma = nullptr;
+            continue;
+        }
 
-        std::string::iterator it = line.begin();
+        word = new Word();
+        word->lemma = lemma;
+
+        std::wstring::iterator it = line.begin();
         while (!std::isspace(*it)) {
-            word.text += *it;
+            word->text += *it;
             it++;
         }
 
         it++; // Skipping whitespace
 
         while (it != line.end()) {
-            std::string grammeme;
+            std::wstring grammeme;
             while (*it != ',' && it != line.end()) {
                 grammeme += *it;
                 it++;
             }
 
             if (*it == ',') it++;
-            word.grammemes.push_back(grammeme);
+            word->grammemes.push_back(grammeme);
         }
 
         words.push_back(word);
+
+        if (lemma == nullptr) {
+            lemma = word;
+        }
     }
 
     return words;
