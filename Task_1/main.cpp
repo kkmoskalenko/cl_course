@@ -3,6 +3,8 @@
 #include <filesystem>
 #include <codecvt>
 #include <clocale>
+#include <map>
+#include <iostream>
 #include "Word.h"
 
 std::vector<Word *> readDictionary(const std::string &filepath) {
@@ -77,13 +79,50 @@ std::vector<std::wstring> readTokens(const std::string &filepath) {
 
 int main() {
     std::setlocale(LC_ALL, "ru_RU.UTF-8");
+    std::wcout.imbue(std::locale("ru_RU.UTF-8"));
 
     const auto words = readDictionary("../resources/dict.opcorpora.txt");
     const auto iterator = std::filesystem::directory_iterator("../resources/news");
 
+    auto dictionary = std::multimap<std::wstring, Word *>();
+    for (const auto &word : words) {
+        dictionary.insert({word->text, word});
+    }
+
+    auto lemmaCounter = std::map<const Word *, int>();
+
     for (const auto &entry : iterator) {
         const auto tokens = readTokens(entry.path());
-        // TODO: Process tokens
+        for (const auto &token : tokens) {
+            std::wstring upperToken = token;
+            std::transform(upperToken.begin(), upperToken.end(),
+                           upperToken.begin(), toupper);
+
+            const auto dict_itr = dictionary.equal_range(upperToken);
+            for (auto itr = dict_itr.first; itr != dict_itr.second; itr++) {
+                const auto word = itr->second;
+                const auto key = word->lemma ?: word;
+                lemmaCounter[key]++;
+            }
+        }
+    }
+
+    std::vector<std::pair<int, const Word *>> statistics;
+    for (const auto &pair : lemmaCounter) {
+        const auto word = pair.first;
+        const auto count = pair.second;
+
+        statistics.emplace_back(count, word);
+    }
+
+    std::sort(statistics.begin(), statistics.end(), std::greater());
+
+    for (const auto &item : statistics) {
+        const auto lemma = item.second->text;
+        const auto pos = item.second->grammemes[0];
+        const auto count = item.first;
+        
+        std::wcout << lemma << ", " << pos << ", " << count << std::endl;
     }
 
     return 0;
