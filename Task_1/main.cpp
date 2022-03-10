@@ -1,9 +1,7 @@
 #include <fstream>
-#include <sstream>
-#include <filesystem>
-#include <codecvt>
 #include <clocale>
 #include <map>
+#include <set>
 #include <iostream>
 #include "Word.h"
 
@@ -93,6 +91,10 @@ int main() {
     }
 
     auto lemmaCounter = std::map<const Word *, int>();
+    auto unrecognizedTokens = std::set<const std::wstring>();
+
+    int tokenCount = 0;
+    int ambiguityCount = 0;
 
     for (const auto &entry : iterator) {
         const auto tokens = readTokens(entry.path());
@@ -102,10 +104,25 @@ int main() {
                            upperToken.begin(), toupper);
 
             const auto dict_itr = dictionary.equal_range(upperToken);
+            auto lemmas = std::set<const Word *>();
+
+            if (dictionary.count(upperToken) == 0) {
+                unrecognizedTokens.insert(upperToken);
+            }
+
             for (auto itr = dict_itr.first; itr != dict_itr.second; itr++) {
                 const auto word = itr->second;
                 const auto key = word->lemma ?: word;
-                lemmaCounter[key]++;
+
+                if (lemmas.count(key) == 0) {
+                    lemmas.insert(key);
+                    lemmaCounter[key]++;
+                }
+            }
+
+            tokenCount++;
+            if (lemmas.size() > 1) {
+                ambiguityCount++;
             }
         }
     }
@@ -120,11 +137,15 @@ int main() {
 
     std::sort(statistics.begin(), statistics.end(), std::greater());
 
+    std::wcout << "Total tokens: " << tokenCount << std::endl;
+    std::wcout << "Ambiguity count: " << ambiguityCount << std::endl;
+    std::wcout << "Unrecognized count: " << unrecognizedTokens.size() << std::endl << std::endl;
+
     for (const auto &item : statistics) {
         const auto lemma = item.second->text;
         const auto pos = item.second->grammemes->at(0);
         const auto count = item.first;
-        
+
         std::wcout << lemma << ", " << pos << ", " << count << std::endl;
     }
 
