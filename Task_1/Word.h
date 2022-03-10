@@ -10,7 +10,7 @@
 
 struct Word {
     std::wstring text;
-    std::vector<std::wstring> grammemes;
+    std::vector<std::wstring> *grammemes;
 
     const Word *lemma;
 };

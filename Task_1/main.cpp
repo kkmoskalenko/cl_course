@@ -32,17 +32,20 @@ std::vector<Word *> readDictionary(const std::string &filepath) {
             it++;
         }
 
-        it++; // Skipping whitespace
+        if (lemma == nullptr) {
+            it++; // Skipping whitespace
+            word->grammemes = new std::vector<std::wstring>();
 
-        while (it != line.end()) {
-            std::wstring grammeme;
-            while (*it != ',' && it != line.end()) {
-                grammeme += *it;
-                it++;
+            while (it != line.end()) {
+                std::wstring grammeme;
+                while (*it != ',' && it != line.end()) {
+                    grammeme += *it;
+                    it++;
+                }
+
+                if (*it == ',') it++;
+                word->grammemes->push_back(grammeme);
             }
-
-            if (*it == ',') it++;
-            word->grammemes.push_back(grammeme);
         }
 
         words.push_back(word);
@@ -119,7 +122,7 @@ int main() {
 
     for (const auto &item : statistics) {
         const auto lemma = item.second->text;
-        const auto pos = item.second->grammemes[0];
+        const auto pos = item.second->grammemes->at(0);
         const auto count = item.first;
         
         std::wcout << lemma << ", " << pos << ", " << count << std::endl;
