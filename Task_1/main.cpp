@@ -1,60 +1,13 @@
+#include <vector>
 #include <fstream>
 #include <clocale>
 #include <map>
 #include <set>
 #include <iostream>
+#include <codecvt>
+
 #include "Word.h"
-
-std::vector<Word *> readDictionary(const std::string &filepath) {
-    std::wifstream dictFile(filepath);
-    dictFile.imbue(std::locale("ru_RU.UTF-8"));
-
-    std::vector<Word *> words;
-    std::wstring line;
-
-    Word *word;
-    Word *lemma;
-
-    while (std::getline(dictFile, line)) {
-        if (line.empty() || std::isdigit(line[0])) {
-            lemma = nullptr;
-            continue;
-        }
-
-        word = new Word();
-        word->lemma = lemma;
-
-        std::wstring::iterator it = line.begin();
-        while (!std::isspace(*it)) {
-            word->text += *it;
-            it++;
-        }
-
-        if (lemma == nullptr) {
-            it++; // Skipping whitespace
-            word->grammemes = new std::vector<std::wstring>();
-
-            while (it != line.end()) {
-                std::wstring grammeme;
-                while (*it != ',' && it != line.end()) {
-                    grammeme += *it;
-                    it++;
-                }
-
-                if (*it == ',') it++;
-                word->grammemes->push_back(grammeme);
-            }
-        }
-
-        words.push_back(word);
-
-        if (lemma == nullptr) {
-            lemma = word;
-        }
-    }
-
-    return words;
-}
+#include "Parser.h"
 
 std::vector<std::wstring> readTokens(const std::string &filepath) {
     std::wifstream wif(filepath);
@@ -80,15 +33,9 @@ std::vector<std::wstring> readTokens(const std::string &filepath) {
 
 int main() {
     std::setlocale(LC_ALL, "ru_RU.UTF-8");
-    std::wcout.imbue(std::locale("ru_RU.UTF-8"));
 
-    const auto words = readDictionary("../resources/dict.opcorpora.txt");
+    const auto dictionary = Parser::readDictionary("../resources/dict.opcorpora.txt", 6000000);
     const auto iterator = std::filesystem::directory_iterator("../resources/news");
-
-    auto dictionary = std::multimap<std::wstring, Word *>();
-    for (const auto &word : words) {
-        dictionary.insert({word->text, word});
-    }
 
     auto lemmaCounter = std::map<const Word *, int>();
     auto unrecognizedTokens = std::set<const std::wstring>();
@@ -96,17 +43,20 @@ int main() {
     int tokenCount = 0;
     int ambiguityCount = 0;
 
-    for (const auto &entry : iterator) {
+    for (const auto &entry: iterator) {
         const auto tokens = readTokens(entry.path());
-        for (const auto &token : tokens) {
+        for (const auto &token: tokens) {
             std::wstring upperToken = token;
             std::transform(upperToken.begin(), upperToken.end(),
-                           upperToken.begin(), toupper);
+                           upperToken.begin(), std::towupper);
 
-            const auto dict_itr = dictionary.equal_range(upperToken);
+            std::wstring_convert<std::codecvt_utf8<wchar_t>> converter;
+            const std::string dictKey = converter.to_bytes(upperToken);
+
+            const auto dict_itr = dictionary.equal_range(dictKey);
             auto lemmas = std::set<const Word *>();
 
-            if (dictionary.count(upperToken) == 0) {
+            if (dictionary.count(dictKey) == 0) {
                 unrecognizedTokens.insert(upperToken);
             }
 
@@ -128,7 +78,7 @@ int main() {
     }
 
     std::vector<std::pair<int, const Word *>> statistics;
-    for (const auto &pair : lemmaCounter) {
+    for (const auto &pair: lemmaCounter) {
         const auto word = pair.first;
         const auto count = pair.second;
 
@@ -141,12 +91,12 @@ int main() {
     std::wcout << "Ambiguity count: " << ambiguityCount << std::endl;
     std::wcout << "Unrecognized count: " << unrecognizedTokens.size() << std::endl << std::endl;
 
-    for (const auto &item : statistics) {
+    for (const auto &item: statistics) {
         const auto lemma = item.second->text;
-        const auto pos = item.second->grammemes->at(0);
+        const auto pos = item.second->getPartOfSpeech();
         const auto count = item.first;
 
-        std::wcout << lemma << ", " << pos << ", " << count << std::endl;
+        std::cout << lemma << ", " << pos << ", " << count << std::endl;
     }
 
     return 0;

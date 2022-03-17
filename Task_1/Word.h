@@ -6,13 +6,16 @@
 #define TASK_1_WORD_H
 
 #include <string>
-#include <vector>
 
 struct Word {
-    std::wstring text;
-    std::vector<std::wstring> *grammemes;
+    std::string text;
+    std::string grammemes;
 
     const Word *lemma;
+
+    [[nodiscard]] std::string getPartOfSpeech() const {
+        return grammemes.substr(0, grammemes.find(','));
+    }
 };
 
 
