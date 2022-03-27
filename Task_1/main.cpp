@@ -6,8 +6,8 @@
 #include <iostream>
 #include <codecvt>
 
-#include "Word.h"
-#include "Parser.h"
+#include "../Parser/Word.h"
+#include "../Parser/Parser.h"
 
 std::vector<std::wstring> readTokens(const std::string &filepath) {
     std::wifstream wif(filepath);
@@ -34,8 +34,8 @@ std::vector<std::wstring> readTokens(const std::string &filepath) {
 int main() {
     std::setlocale(LC_ALL, "ru_RU.UTF-8");
 
-    const auto dictionary = Parser::readDictionary("../resources/dict.opcorpora.txt", 6000000);
-    const auto iterator = std::filesystem::directory_iterator("../resources/news");
+    const auto dictionary = Parser::readDictionary(DICTIONARY_PATH, 6000000);
+    const auto iterator = std::filesystem::directory_iterator(NEWS_PATH);
 
     auto lemmaCounter = std::map<const Word *, int>();
     auto unrecognizedTokens = std::set<const std::wstring>();

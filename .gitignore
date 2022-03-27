@@ -1,3 +1,6 @@
+Resources/
+cmake-build-*/
+
 # General
 .DS_Store
 .AppleDouble

@@ -1,0 +1,1 @@
+add_library(Parser Word.h Parser.h Parser.cpp)
