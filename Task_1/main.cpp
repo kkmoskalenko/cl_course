@@ -1,35 +1,14 @@
 #include <vector>
-#include <fstream>
+#include <filesystem>
 #include <clocale>
 #include <map>
 #include <set>
 #include <iostream>
+#include <fstream>
 #include <codecvt>
 
 #include "../Parser/Word.h"
 #include "../Parser/Parser.h"
-
-std::vector<std::wstring> readTokens(const std::string &filepath) {
-    std::wifstream wif(filepath);
-    wif.imbue(std::locale("ru_RU.UTF-8"));
-
-    std::vector<std::wstring> tokens;
-    std::wstring token;
-    wchar_t ch;
-
-    while (wif.get(ch)) {
-        if (!std::iswalpha(ch)) {
-            if (!token.empty()) {
-                tokens.push_back(token);
-                token = std::wstring();
-            }
-        } else {
-            token += ch;
-        }
-    }
-
-    return tokens;
-}
 
 int main() {
     std::setlocale(LC_ALL, "ru_RU.UTF-8");
@@ -44,7 +23,9 @@ int main() {
     int ambiguityCount = 0;
 
     for (const auto &entry: iterator) {
-        const auto tokens = readTokens(entry.path());
+        std::wifstream wif(entry.path());
+        const auto tokens = Parser::readTokens(wif);
+
         for (const auto &token: tokens) {
             std::wstring upperToken = token;
             std::transform(upperToken.begin(), upperToken.end(),

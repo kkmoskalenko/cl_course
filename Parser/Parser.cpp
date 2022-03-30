@@ -27,11 +27,11 @@ void mapFile(const char *path, const std::function<void(const char *, size_t)> &
     if (close(fd) == -1) throwSystemError(path);
 }
 
-Parser::Dictionary Parser::readDictionary(const char *path, size_t expectedSize) {
+Parser::Dictionary Parser::readDictionary(const std::string &path, size_t expectedSize) {
     Parser::Dictionary dictionary;
     dictionary.reserve(expectedSize);
 
-    mapFile(path, [&dictionary](const char *ptr, size_t length) {
+    mapFile(path.c_str(), [&dictionary](const char *ptr, size_t length) {
         Word *lemma;
 
         for (const char *ch = ptr; ch != ptr + length; ch++) {
@@ -60,4 +60,34 @@ Parser::Dictionary Parser::readDictionary(const char *path, size_t expectedSize)
     });
 
     return dictionary;
+}
+
+Parser::Tokens Parser::readTokens(std::wistream &stream, bool includePunctuation, const std::locale &locale) {
+    stream.imbue(locale);
+
+    Tokens tokens;
+    std::wstring token;
+    wchar_t ch;
+
+    while (stream.get(ch)) {
+        if (std::iswalpha(ch) || ch == '-') {
+            token += ch;
+        } else {
+            if (!token.empty() && token[0] != '-') {
+                tokens.push_back(token);
+            }
+
+            if (includePunctuation && std::iswpunct(ch)) {
+                tokens.emplace_back(1, ch);
+            }
+
+            token = L"";
+        }
+    }
+
+    if (!token.empty() && token[0] != '-') {
+        tokens.push_back(token);
+    }
+
+    return tokens;
 }
