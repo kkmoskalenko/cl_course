@@ -11,3 +11,4 @@ add_compile_definitions(NEWS_PATH="${NEWS_PATH}")
 
 add_subdirectory(Parser)
 add_subdirectory(Task_1)
+add_subdirectory(Task_2)
