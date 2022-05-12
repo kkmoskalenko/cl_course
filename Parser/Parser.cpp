@@ -5,6 +5,7 @@
 #include <sys/stat.h>
 #include <sys/mman.h>
 #include <system_error>
+#include <codecvt>
 
 void throwSystemError(const char *path) {
     throw std::system_error(errno, std::generic_category(), path);
@@ -90,4 +91,33 @@ Parser::Tokens Parser::readTokens(std::wistream &stream, bool includePunctuation
     }
 
     return tokens;
+}
+
+Parser::WordSet Parser::normalizeToken(const std::wstring &token, Parser::Dictionary &dictionary) {
+    static std::wstring_convert<std::codecvt_utf8<wchar_t>> converter;
+
+    std::wstring upperToken = token;
+    std::transform(upperToken.begin(), upperToken.end(),
+                   upperToken.begin(), std::towupper);
+
+    const std::string dictKey = converter.to_bytes(upperToken);
+    const auto dict_itr = dictionary.equal_range(dictKey);
+
+    auto lemmas = WordSet();
+
+    if (dictionary.count(dictKey) == 0) {
+        const auto lemma = new Word{dictKey, "UNKNOWN"};
+        dictionary.emplace(lemma->text, lemma);
+        lemmas.insert(lemma);
+        return lemmas;
+    }
+
+    for (auto itr = dict_itr.first; itr != dict_itr.second; itr++) {
+        const auto word = itr->second;
+        const auto key = word->lemma ?: word;
+
+        lemmas.insert(key);
+    }
+
+    return lemmas;
 }

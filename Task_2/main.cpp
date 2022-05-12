@@ -12,38 +12,10 @@
 #include "../Parser/Parser.h"
 
 using Context = std::vector<std::string>;
-using WordSet = std::set<const Word *>;
 
 std::wstring_convert<std::codecvt_utf8<wchar_t>> converter; // NOLINT(cert-err58-cpp)
 
-WordSet normalizeToken(const std::wstring &token, Parser::Dictionary &dictionary) {
-    std::wstring upperToken = token;
-    std::transform(upperToken.begin(), upperToken.end(),
-                   upperToken.begin(), std::towupper);
-
-    const std::string dictKey = converter.to_bytes(upperToken);
-    const auto dict_itr = dictionary.equal_range(dictKey);
-
-    auto lemmas = WordSet();
-
-    if (dictionary.count(dictKey) == 0) {
-        const auto lemma = new Word{dictKey, "UNKNOWN"};
-        dictionary.emplace(lemma->text, lemma);
-        lemmas.insert(lemma);
-        return lemmas;
-    }
-
-    for (auto itr = dict_itr.first; itr != dict_itr.second; itr++) {
-        const auto word = itr->second;
-        const auto key = word->lemma ?: word;
-
-        lemmas.insert(key);
-    }
-
-    return lemmas;
-}
-
-std::set<Context> getAllContexts(const std::list<WordSet> &lemmasList) {
+std::set<Context> getAllContexts(const std::list<Parser::WordSet> &lemmasList) {
     std::set<Context> allContexts;
     allContexts.emplace();
 
@@ -102,10 +74,10 @@ int main() {
     std::wstringstream wss(converter.from_bytes(term));
     const auto termTokens = Parser::readTokens(wss, true);
 
-    std::vector<WordSet> normalizedTerm;
+    std::vector<Parser::WordSet> normalizedTerm;
     normalizedTerm.reserve(termTokens.size());
     for (const auto &token: termTokens) {
-        normalizedTerm.push_back(normalizeToken(token, dictionary));
+        normalizedTerm.push_back(Parser::normalizeToken(token, dictionary));
     }
 
     auto leftContexts = std::map<Context, int>();
@@ -116,10 +88,10 @@ int main() {
         const auto tokens = Parser::readTokens(wif, true);
 
         const auto maxListSize = windowSize + termTokens.size();
-        std::list<WordSet> lemmasList;
+        std::list<Parser::WordSet> lemmasList;
 
         for (auto tokenIt = tokens.begin(); tokenIt != tokens.end(); tokenIt++) {
-            lemmasList.push_back(normalizeToken(*tokenIt, dictionary));
+            lemmasList.push_back(Parser::normalizeToken(*tokenIt, dictionary));
             if (lemmasList.size() > maxListSize) lemmasList.pop_front();
 
             bool contextMatches = lemmasList.size() > termTokens.size();
@@ -148,13 +120,13 @@ int main() {
                 }
 
                 // Left Context
-                std::list<WordSet> leftLemmas;
+                std::list<Parser::WordSet> leftLemmas;
 
                 const auto leftContextEnd = tokenIt - (int) (lemmasList.size() - termTokens.size());
                 const auto leftContextBegin = leftContextEnd - (int) maxListSize;
 
                 for (auto it = leftContextEnd; it != leftContextBegin && it >= tokens.begin(); it--) {
-                    leftLemmas.push_front(normalizeToken(*it, dictionary));
+                    leftLemmas.push_front(Parser::normalizeToken(*it, dictionary));
                 }
 
                 if (leftLemmas.size() > 1) {

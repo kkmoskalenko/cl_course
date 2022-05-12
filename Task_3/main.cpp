@@ -199,23 +199,8 @@ std::vector<const NGram *> extractNGrams() {
 }
 
 const Word *normalizeToken(const std::wstring &token, Parser::Dictionary &dictionary) {
-    static std::wstring_convert<std::codecvt_utf8<wchar_t>> converter;
-
-    std::wstring upperToken = token;
-    std::transform(upperToken.begin(), upperToken.end(),
-                   upperToken.begin(), std::towupper);
-
-    const std::string dictKey = converter.to_bytes(upperToken);
-    const auto dict_itr = dictionary.equal_range(dictKey);
-
-    if (dictionary.count(dictKey) == 0) {
-        const auto lemma = new Word{dictKey, "UNKNOWN"};
-        dictionary.emplace(lemma->text, lemma);
-        return lemma;
-    } else {
-        auto word = dict_itr.first->second;
-        return word->lemma ?: word;
-    }
+    const auto lemmas = Parser::normalizeToken(token, dictionary);
+    return *lemmas.begin();
 }
 
 int main() {
