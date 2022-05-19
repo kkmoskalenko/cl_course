@@ -84,12 +84,17 @@ int main() {
             normalizedContext.push_back(Parser::normalizeToken(token, dictionary));
         }
 
-        for (int i = 0; i < tokens.size(); i++) {
-            for (const auto &model: models) {
-                const auto modelSize = model->size();
-                if (model->matchesContext(normalizedContext.begin() + i, normalizedContext.end())) {
-                    fragments[model->name].emplace(tokens.begin() + i, tokens.begin() + i + modelSize);
+        for (int j = 0, i = 0; j < tokens.size(); j++) {
+            if (tokens[j] == L"." || tokens[j] == L"?" || tokens[j] == L"!") {
+                for (const auto &model: models) {
+                    const auto match = model->findMatch(
+                            normalizedContext.begin() + i, normalizedContext.begin() + j);
+                    if (match != normalizedContext.begin() + j) {
+                        fragments[model->name].emplace(tokens.begin() + i, tokens.begin() + j);
+                    }
                 }
+
+                i = ++j;
             }
         }
     }

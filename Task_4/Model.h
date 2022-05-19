@@ -12,27 +12,21 @@
 struct BaseModel {
     using ContextIterator = std::vector<const Parser::WordSet>::const_iterator;
 
-    [[nodiscard]] virtual bool matchesContext(ContextIterator begin, ContextIterator end) const = 0;
-
-    [[nodiscard]] virtual int size() const = 0;
+    [[nodiscard]] virtual ContextIterator findMatch(ContextIterator begin, ContextIterator end) const = 0;
 };
 
 struct PartOfSpeechModel : BaseModel {
     explicit PartOfSpeechModel(std::string pos) : partOfSpeech(std::move(pos)) {};
 
-    [[nodiscard]] bool matchesContext(ContextIterator begin, ContextIterator end) const override {
-        if (std::distance(begin, end) < size()) {
-            return false;
+    [[nodiscard]] ContextIterator findMatch(ContextIterator begin, ContextIterator end) const override {
+        for (auto it = begin; it != end; it++) {
+            for (const auto &lemma: *it) {
+                if (lemma->getPartOfSpeech() == this->partOfSpeech) {
+                    return it;
+                }
+            }
         }
-
-        const auto lemmas = *begin;
-        return std::any_of(lemmas.begin(), lemmas.end(), [this](const Word *lemma) {
-            return lemma->getPartOfSpeech() == this->partOfSpeech;
-        });
-    }
-
-    [[nodiscard]] int size() const override {
-        return 1;
+        return end;
     }
 
 private:
@@ -42,28 +36,22 @@ private:
 struct VocabularyModel : BaseModel {
     explicit VocabularyModel(Parser::WordSet lemmas) : matchingLemmas(std::move(lemmas)) {}
 
-    [[nodiscard]] bool matchesContext(ContextIterator begin, ContextIterator end) const override {
-        if (std::distance(begin, end) < size()) {
-            return false;
+    [[nodiscard]] ContextIterator findMatch(ContextIterator begin, ContextIterator end) const override {
+        for (auto it = begin; it != end; it++) {
+            const auto lemmas = *it;
+            auto first1 = lemmas.begin();
+            auto last1 = lemmas.end();
+            auto first2 = matchingLemmas.begin();
+            auto last2 = matchingLemmas.end();
+
+            while (first1 != last1 && first2 != last2) {
+                if (*first1 < *first2) { ++first1; }
+                else if (*first2 < *first1) { ++first2; }
+                else { return it; }
+            }
         }
 
-        const auto lemmas = *begin;
-        auto first1 = lemmas.begin();
-        auto last1 = lemmas.end();
-        auto first2 = matchingLemmas.begin();
-        auto last2 = matchingLemmas.end();
-
-        while (first1 != last1 && first2 != last2) {
-            if (*first1 < *first2) { ++first1; }
-            else if (*first2 < *first1) { ++first2; }
-            else { return true; }
-        }
-
-        return false;
-    }
-
-    [[nodiscard]] int size() const override {
-        return 1;
+        return end;
     }
 
 private:
@@ -74,29 +62,14 @@ struct CompoundModel : BaseModel {
     explicit CompoundModel(std::string name, std::vector<const BaseModel *> models)
             : name(std::move(name)), models(std::move(models)) {}
 
-    [[nodiscard]] bool matchesContext(ContextIterator begin, ContextIterator end) const override {
-        if (std::distance(begin, end) < size()) {
-            return false;
-        }
-
+    [[nodiscard]] ContextIterator findMatch(ContextIterator begin, ContextIterator end) const override {
         auto iterator = begin;
         for (const auto model: models) {
-            if (!model->matchesContext(iterator, end)) {
-                return false;
-            }
-
-            iterator += model->size();
+            iterator = model->findMatch(iterator, end);
+            if (iterator == end) break;
         }
 
-        return true;
-    }
-
-    [[nodiscard]] int size() const override {
-        int result = 0;
-        for (const auto model: models) {
-            result += model->size();
-        }
-        return result;
+        return iterator;
     }
 
     const std::string name;
