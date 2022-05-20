@@ -12,16 +12,24 @@
 struct BaseModel {
     using ContextIterator = std::vector<const Parser::WordSet>::const_iterator;
 
-    [[nodiscard]] virtual ContextIterator findMatch(ContextIterator begin, ContextIterator end) const = 0;
+    [[nodiscard]] virtual ContextIterator findMatch(
+            ContextIterator begin, ContextIterator end,
+            std::set<int> &matchedIndices
+    ) const = 0;
 };
 
 struct PartOfSpeechModel : BaseModel {
     explicit PartOfSpeechModel(std::string pos) : partOfSpeech(std::move(pos)) {};
 
-    [[nodiscard]] ContextIterator findMatch(ContextIterator begin, ContextIterator end) const override {
-        for (auto it = begin; it != end; it++) {
+    [[nodiscard]] ContextIterator findMatch(
+            ContextIterator begin, ContextIterator end,
+            std::set<int> &matchedIndices
+    ) const override {
+        int tokenPos = 0;
+        for (auto it = begin; it != end; it++, tokenPos++) {
             for (const auto &lemma: *it) {
                 if (lemma->getPartOfSpeech() == this->partOfSpeech) {
+                    matchedIndices.insert(tokenPos);
                     return it;
                 }
             }
@@ -38,11 +46,19 @@ struct VocabularyModel : BaseModel {
 
     explicit VocabularyModel(NormalizedNGram lemmas) : matchingNGrams(std::move(lemmas)) {}
 
-    [[nodiscard]] ContextIterator findMatch(ContextIterator begin, ContextIterator end) const override {
-        for (auto it = begin; it != end; it++) {
+    [[nodiscard]] ContextIterator findMatch(
+            ContextIterator begin, ContextIterator end,
+            std::set<int> &matchedIndices
+    ) const override {
+        int tokenPos = 0;
+        for (auto it = begin; it != end; it++, tokenPos++) {
             auto subIter = it;
+            auto subTokenPos = tokenPos;
+
             for (const auto &nGram: matchingNGrams) {
                 bool nGramMatched = true;
+                std::set<int> nGramIndices;
+
                 for (const auto &lemma: nGram) {
                     if (!intersect(subIter->begin(), subIter->end(),
                                    lemma.begin(), lemma.end())) {
@@ -51,12 +67,14 @@ struct VocabularyModel : BaseModel {
                     }
                     if (subIter != end) {
                         subIter++;
+                        nGramIndices.insert(subTokenPos++);
                     } else {
                         nGramMatched = false;
                         break;
                     }
                 }
                 if (nGramMatched) {
+                    matchedIndices.insert(nGramIndices.begin(), nGramIndices.end());
                     return subIter;
                 }
             }
@@ -90,11 +108,19 @@ struct CompoundModel : BaseModel {
     explicit CompoundModel(std::string name, std::vector<const BaseModel *> models)
             : name(std::move(name)), models(std::move(models)) {}
 
-    [[nodiscard]] ContextIterator findMatch(ContextIterator begin, ContextIterator end) const override {
+    [[nodiscard]] ContextIterator findMatch(
+            ContextIterator begin, ContextIterator end,
+            std::set<int> &matchedIndices
+    ) const override {
         auto iterator = begin;
         for (const auto model: models) {
-            iterator = model->findMatch(iterator, end);
+            std::set<int> indices;
+            const auto itOffset = (int) (iterator - begin);
+            iterator = model->findMatch(iterator, end, indices);
             if (iterator == end) break;
+            for (const auto &idx: indices) {
+                matchedIndices.insert(itOffset + idx);
+            }
         }
 
         return iterator;

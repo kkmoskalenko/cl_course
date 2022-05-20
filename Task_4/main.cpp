@@ -96,10 +96,22 @@ int main() {
         for (int j = 0, i = 0; j < tokens.size(); j++) {
             if (tokens[j] == L"." || tokens[j] == L"?" || tokens[j] == L"!") {
                 for (const auto &model: models) {
+                    std::set<int> matchedIndices;
                     const auto match = model->findMatch(
-                            normalizedContext.begin() + i, normalizedContext.begin() + j);
+                            normalizedContext.begin() + i,
+                            normalizedContext.begin() + j,
+                            matchedIndices);
                     if (match != normalizedContext.begin() + j) {
-                        fragments[model->name].emplace(tokens.begin() + i, tokens.begin() + j);
+                        std::vector<std::wstring> fragment;
+                        for (int tokenPos = i; tokenPos != j; tokenPos++) {
+                            auto token = *(tokens.begin() + tokenPos);
+                            if (matchedIndices.find(tokenPos - i) != matchedIndices.end()) {
+                                std::transform(token.begin(), token.end(),
+                                               token.begin(), std::towupper);
+                            }
+                            fragment.push_back(token);
+                        }
+                        fragments[model->name].insert(fragment);
                     }
                 }
 
