@@ -1,18 +1,51 @@
 {
   "models": [
     {"name": "Actor action", "value": [{"voc": "actor_name"}, {"pos": "VERB"}, {"pos": "NOUN"}]},
-    {"name": "Company action", "value": [{"pos": "NOUN"}, {"voc": "movie_company"}, {"pos": "VERB"}]},
+    {"name": "Company action", "value": [{"pos": "NOUN"}, {"voc": "film_company"}, {"pos": "VERB"}]},
+    {"name": "Two actors", "value": [{"voc": "actor_name"}, {"pos": "CONJ "}, {"voc": "actor_name"}]},
+    {"name": "Actor + Movie", "value": [{"mod": "Actor action"}, {"voc": "movie_name"}]},
+    {"name": "Company + Actor", "value": [{"voc": "film_company"}, {"pos": "VERB"}, {"voc": "actor_name"}]},
     {
-      "name": "Random phrase",
-      "value": [{"pos": "NOUN"}, {"pos": "VERB"}, {"pos": "PREP "}, {"pos": "ADJF"}, {"pos": "NOUN"}]
+      "name": "Actor Extended Action",
+      "value": [{"voc": "actor_name"}, {"pos": "VERB"}, {"pos": "PREP "}, {"pos": "ADJF"}, {"pos": "NOUN"}]
     },
-    {"name": "Two actors", "value": [{"voc": "actor_name"}, {"pos": "CONJ "}, {"voc": "actor_name"}]}
+    {"name": "Company + Movie", "value": [{"voc": "film_company"}, {"pos": "VERB"}, {"voc": "movie_name"}]},
+    {"name": "Plain: Actor name", "value": [{"voc": "actor_name"}]},
+    {"name": "Plain: Company name", "value": [{"voc": "film_company"}]},
+    {"name": "Plain: Movie name", "value": [{"voc": "movie_name"}]}
   ],
   "vocabulary": {
-    "movie_company": [
-      "Warner Bros", "Sony Pictures", "Walt Disney Studios", "Universal Pictures", "20th Century Fox",
-      "Paramount Pictures", "Lionsgate Films", "The Weinstein Company", "Metro-Goldwyn-Mayer Studios",
-      "DreamWorks Pictures"
+    "film_company": [
+      "20th Century Fox", "Alcon Entertainment", "Amblin Entertainment", "Bad Robot Productions", "BBC Films",
+      "BBC Television Centre", "Blue Sky Studios", "Blumhouse Productions", "Canal+", "Carolco Pictures",
+      "Castle Rock Entertainment", "Columbia Pictures", "Columbia Records", "Constantin Film", "DC Comics",
+      "Decca Records", "DreamWorks Animation", "DreamWorks Pictures", "EuropaCorp", "Focus Features", "Gaumont",
+      "Happy Madison", "Illumination Entertainment", "Imagine Entertainment", "Lakeshore Entertainment",
+      "Legendary Pictures", "Lionsgate", "Lucasfilm", "Marvel Studios", "Metro-Goldwyn-Mayer", "Millennium Films",
+      "Miramax Films", "Netflix", "New Line Cinema", "Nickelodeon Movies", "Original Film", "Paramount Pictures",
+      "Pathé", "Pixar", "Polydor Records", "Regency Enterprises", "Relativity Media", "Screen Gems", "Skydance Media",
+      "Sony", "Studio Canal", "Studio Ghibli", "Summit Entertainment", "The Weinstein Company", "Touchstone Pictures",
+      "TriStar Pictures", "United Artists", "Universal Music Records", "Universal Pictures",
+      "Village Roadshow Pictures", "Disney", "Warner Bros. Pictures", "Ленфильм", "Мосфильм", "Союзмультфильм",
+      "Централ Партнершип"
+    ],
+    "movie_name": [
+      "12 лет рабства", "Ford против Ferrari", "Аватар", "Аквамен", "Аладдин", "Алиса в Стране чудес",
+      "Безумный Макс: Дорога ярости", "Битва при Чосинском водохранилище", "Богемская рапсодия", "Бэтмен",
+      "Бэтмен против Супермена", "В поисках Дори", "В поисках Немо", "В центре внимания", "Веном", "Властелин колец",
+      "Воин", "Война волков", "Волк с Уолл-стрит", "Гадкий я", "Гамильтон", "Гарри Поттер", "Головоломка",
+      "Голодные игры", "Гонка", "Дангал", "День независимости", "Джанго освобождённый", "Джокер", "Джуманджи",
+      "Дикие истории", "Дэдпул", "Дюна", "Железный человек", "Зверополис", "Звёздные войны", "Зелёная книга",
+      "Индиана Джонс", "Инопланетянин", "Интерстеллар", "История игрушек", "Исчезнувшая", "Как приручить дракона",
+      "Капернаум", "Капитан Марвел", "Клаус", "Книга джунглей", "Комната", "Король Лев", "Красавица и чудовище",
+      "Ледниковый период", "Логан", "Миньоны", "Мир юрского периода", "Миссия невыполнима", "Мстители", "Одержимость",
+      "Остров проклятых", "Отель «Гранд Будапешт»", "Отец", "Охота", "Паразиты", "Парк юрского периода",
+      "Первый мститель: Противостояние", "Пираты Карибского моря", "Пленницы", "По соображениям совести", "Пожары",
+      "Привет, мам", "Прислуга", "Развод Надера и Симин", "Служанка", "Стражи Галактики", "Сумерки", "Суперсемейка",
+      "Тайна Коко", "Тайная жизнь домашних животных", "Твоё имя", "Титаник", "Тор: Рагнарёк", "Трансформеры",
+      "Три билборда на границе Эббинга, Миссури", "Тёмный рыцарь", "Тёмный рыцарь: Возрождение легенды",
+      "Фантастические твари и где они обитают", "Форсаж", "Хоббит", "Холодное сердце", "Человек-паук", "Чудо-женщина",
+      "Чёрная пантера", "Шрек"
     ],
     "actor_name": [
       "Алан Рикман", "Аманда Сейфрид", "Анжелина Джоли", "Антонио Бандерас", "Арнольд Шварценеггер", "Бен Аффлек",
