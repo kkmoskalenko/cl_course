@@ -34,20 +34,31 @@ private:
 };
 
 struct VocabularyModel : BaseModel {
-    explicit VocabularyModel(Parser::WordSet lemmas) : matchingLemmas(std::move(lemmas)) {}
+    using NormalizedNGram = std::set<const std::vector<const Parser::WordSet>>;
+
+    explicit VocabularyModel(NormalizedNGram lemmas) : matchingNGrams(std::move(lemmas)) {}
 
     [[nodiscard]] ContextIterator findMatch(ContextIterator begin, ContextIterator end) const override {
         for (auto it = begin; it != end; it++) {
-            const auto lemmas = *it;
-            auto first1 = lemmas.begin();
-            auto last1 = lemmas.end();
-            auto first2 = matchingLemmas.begin();
-            auto last2 = matchingLemmas.end();
-
-            while (first1 != last1 && first2 != last2) {
-                if (*first1 < *first2) { ++first1; }
-                else if (*first2 < *first1) { ++first2; }
-                else { return it; }
+            auto subIter = it;
+            for (const auto &nGram: matchingNGrams) {
+                bool nGramMatched = true;
+                for (const auto &lemma: nGram) {
+                    if (!intersect(subIter->begin(), subIter->end(),
+                                   lemma.begin(), lemma.end())) {
+                        nGramMatched = false;
+                        break;
+                    }
+                    if (subIter != end) {
+                        subIter++;
+                    } else {
+                        nGramMatched = false;
+                        break;
+                    }
+                }
+                if (nGramMatched) {
+                    return subIter;
+                }
             }
         }
 
@@ -55,7 +66,24 @@ struct VocabularyModel : BaseModel {
     }
 
 private:
-    const Parser::WordSet matchingLemmas;
+    const NormalizedNGram matchingNGrams;
+
+    template<class InputIt1, class InputIt2>
+    static bool intersect(InputIt1 first1, InputIt1 last1,
+                          InputIt2 first2, InputIt2 last2) {
+        while (first1 != last1 && first2 != last2) {
+            if (*first1 < *first2) {
+                ++first1;
+                continue;
+            }
+            if (*first2 < *first1) {
+                ++first2;
+                continue;
+            }
+            return true;
+        }
+        return false;
+    }
 };
 
 struct CompoundModel : BaseModel {

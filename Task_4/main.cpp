@@ -2,6 +2,7 @@
 #include <fstream>
 #include <iostream>
 #include <codecvt>
+#include <sstream>
 
 #include "json.hpp"
 #include "../Parser/Parser.h"
@@ -12,22 +13,30 @@ std::vector<const CompoundModel *> loadModel(const std::string &filepath, Parser
     nlohmann::json json;
     input >> json;
 
-    std::unordered_map<std::string, const Parser::WordSet> vocabulary;
+    std::unordered_map<std::string, VocabularyModel::NormalizedNGram> vocabulary;
     static std::wstring_convert<std::codecvt_utf8<wchar_t>> converter;
 
     const auto voc_json = json["vocabulary"];
     for (auto it = voc_json.begin(); it != voc_json.end(); it++) {
         const auto values = it.value().get<std::vector<std::string>>();
+        for (const auto &nGram: values) {
+            std::wstringstream ss(converter.from_bytes(nGram));
+            const auto tokens = Parser::readTokens(ss, true);
 
-        Parser::WordSet normalizedValues;
+            std::vector<const Parser::WordSet> normalizedValues;
+            for (const auto &token: tokens) {
+                const auto normalized = Parser::normalizeToken(token, dictionary);
+                normalizedValues.push_back(normalized);
+            }
 
-        for (const auto &value: values) {
-            const auto token = converter.from_bytes(value);
-            const auto normalized = Parser::normalizeToken(token, dictionary);
-            normalizedValues.insert(normalized.begin(), normalized.end());
+            auto nGrams = vocabulary.find(it.key());
+            if (nGrams == vocabulary.end()) {
+                vocabulary.emplace(it.key(), VocabularyModel::NormalizedNGram());
+                nGrams = vocabulary.find(it.key());
+            }
+
+            nGrams->second.insert(normalizedValues);
         }
-
-        vocabulary.emplace(it.key(), normalizedValues);
     }
 
     std::vector<const CompoundModel *> models;
