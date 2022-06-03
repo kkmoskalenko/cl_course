@@ -3,6 +3,7 @@
 #include <fstream>
 #include <sstream>
 #include <map>
+#include <codecvt>
 
 #include "../Parser/Parser.h"
 #include "Term.h"
@@ -18,6 +19,8 @@ std::unordered_map<std::string, Term *> termDictionary;
 
 std::unordered_map<std::string, int> documentSize;
 unsigned long averageDocumentSize = 0;
+
+using ScoreAndEntries = std::pair<double, std::set<int>>;
 
 std::vector<std::string> normalizeRequest(const std::wstring &request) {
     std::vector<std::string> result;
@@ -36,8 +39,8 @@ std::vector<std::string> normalizeRequest(const std::wstring &request) {
     return result;
 }
 
-std::unordered_map<std::string, double> getDocumentsScore(const std::string &word) {
-    std::unordered_map<std::string, double> documentScore;
+std::unordered_map<std::string, ScoreAndEntries> getDocumentsScore(const std::string &word) {
+    std::unordered_map<std::string, ScoreAndEntries> documentScore;
     if (termDictionary.find(word) == termDictionary.end()) {
         return documentScore;
     }
@@ -52,14 +55,17 @@ std::unordered_map<std::string, double> getDocumentsScore(const std::string &wor
         const auto f = (double) entry.second.positions.size() / docSize;
 
         if (documentScore.find(entry.first) == documentScore.end()) {
-            documentScore.emplace(entry.first, 0.0);
+            documentScore.emplace(entry.first, ScoreAndEntries{});
         }
 
-        documentScore.at(entry.first) += idf * (f * (BM25::k1 + 1)) / (
+        documentScore[entry.first].first += idf * (f * (BM25::k1 + 1)) / (
                 f + BM25::k1 * (1 - BM25::b + BM25::b * (
                         docSize / (double) averageDocumentSize
                 ))
         );
+
+        const auto &positions = entry.second.positions;
+        documentScore[entry.first].second.insert(positions.begin(), positions.end());
     }
 
     return documentScore;
@@ -103,10 +109,12 @@ int main() {
 
     averageDocumentSize /= documentSize.size();
 
-    const auto request = L"";
-    const auto words = normalizeRequest(request);
+    std::wstring_convert<std::codecvt_utf8<wchar_t>> converter;
 
-    std::unordered_map<std::string, double> documentScore;
+    const auto request = "";
+    const auto words = normalizeRequest(converter.from_bytes(request));
+
+    std::unordered_map<std::string, ScoreAndEntries> documentScore;
     std::unordered_map<std::string, const Descriptor *> synsets;
 
     for (const auto &descriptor: thesaurus) {
@@ -119,7 +127,11 @@ int main() {
         auto scores = getDocumentsScore(word);
         if (synsets.find(word) != synsets.end()) {
             const auto merge = [&scores](const decltype(scores) &pairs, double coeff) {
-                for (const auto &pair: pairs) scores[pair.first] = std::max(scores[pair.first], coeff * pair.second);
+                for (const auto &pair: pairs) {
+                    scores[pair.first].first = std::max(scores[pair.first].first, coeff * pair.second.first);
+                    const auto &positions = pair.second.second;
+                    scores[pair.first].second.insert(positions.begin(), positions.end());
+                }
             };
 
             for (const auto &syn: synsets[word]->synset) merge(getDocumentsScore(syn), 0.5);
@@ -128,17 +140,44 @@ int main() {
         }
 
         for (const auto &score: scores) {
-            documentScore[score.first] += score.second;
+            documentScore[score.first].first += score.second.first;
+
+            const auto &positions = score.second.second;
+            documentScore[score.first].second.insert(positions.begin(), positions.end());
         }
     }
 
-    std::map<double, std::string, std::greater<>> results;
-    for (const auto &pair: documentScore) {
-        results.emplace(pair.second, pair.first);
+    for (const auto &score: documentScore) {
+        std::vector<int> positions;
+        std::copy(score.second.second.begin(),
+                  score.second.second.end(),
+                  std::back_inserter(positions));
+
+        for (int i = 0; i < positions.size() - 1; i++) {
+            if (positions[i] + 1 == positions[i + 1]) {
+                documentScore[score.first].first += 1.0;
+            } else if (positions[i] + 2 == positions[i + 1]) {
+                documentScore[score.first].first += 0.5;
+            }
+        }
     }
 
+    std::map<double, std::pair<std::string, std::set<int>>, std::greater<>> results;
+    for (const auto &pair: documentScore) {
+        results.emplace(pair.second.first, std::pair(pair.first, pair.second.second));
+    }
+
+    std::cout << results.size() << " results found for «" << request << "»." << std::endl << std::endl;
+
     for (const auto &item: results) {
-        std::cout << item.first << ' ' << item.second << std::endl;
+        std::cout << "Score = " << item.first << "; Positions = { ";
+
+        const auto &positions = item.second.second;
+        for (const auto &pos: positions) {
+            std::cout << pos << ' ';
+        }
+
+        std::cout << "}; URL = file://" << item.second.first << std::endl;
     }
 
     return 0;
