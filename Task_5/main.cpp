@@ -8,6 +8,9 @@
 #include "../Parser/Parser.h"
 #include "Term.h"
 #include "Thesaurus.h"
+#include "Requests.h"
+
+const auto &request = requests[8];
 
 namespace BM25 {
     constexpr double k1 = 2.0;
@@ -22,11 +25,11 @@ unsigned long averageDocumentSize = 0;
 
 using ScoreAndEntries = std::pair<double, std::set<int>>;
 
-std::vector<std::string> normalizeRequest(const std::wstring &request) {
+std::vector<std::string> normalizeRequest(const std::wstring &requestText) {
     std::vector<std::string> result;
 
     std::wstringstream ss;
-    ss.str(request);
+    ss.str(requestText);
 
     const auto tokens = Parser::readTokens(ss, true);
     for (const auto &token: tokens) {
@@ -110,8 +113,6 @@ int main() {
     averageDocumentSize /= documentSize.size();
 
     std::wstring_convert<std::codecvt_utf8<wchar_t>> converter;
-
-    const auto request = "";
     const auto words = normalizeRequest(converter.from_bytes(request));
 
     std::unordered_map<std::string, ScoreAndEntries> documentScore;
